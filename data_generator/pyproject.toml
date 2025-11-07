@@ -1,0 +1,18 @@
+[project]
+name = "energy-trading-data-generator"
+version = "0.1.0"
+description = "Weather data generator for energy trading demo"
+requires-python = ">=3.11"
+dependencies = [
+    "pandas",
+    "azure-storage-blob",
+    "azure-identity",
+    "deltalake",
+    "faker",
+    "python-dotenv",
+    "pyarrow",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

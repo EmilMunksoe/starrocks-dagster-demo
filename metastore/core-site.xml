@@ -1,0 +1,13 @@
+<configuration>
+<property>
+    <name>fs.azure.account.key.${AZURE_STORAGE_ACCOUNT_NAME}.dfs.core.windows.net</name>
+    <value>${AZURE_STORAGE_ACCOUNT_KEY}</value>
+    <description>Azure Storage Account Key for ADLS Gen2</description>
+</property>
+
+<property>
+    <name>fs.azure.account.auth.type.${AZURE_STORAGE_ACCOUNT_NAME}.dfs.core.windows.net</name>
+    <value>SharedKey</value>
+    <description>Use SharedKey authentication</description>
+</property>
+</configuration>

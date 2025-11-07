@@ -1,0 +1,15 @@
+[project]
+name = "energy-trading-setup"
+version = "0.1.0"
+description = "Setup script for energy trading demo"
+requires-python = ">=3.11"
+dependencies = [
+    "pandas",
+    "deltalake",
+    "azure-storage-blob",
+    "python-dotenv",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

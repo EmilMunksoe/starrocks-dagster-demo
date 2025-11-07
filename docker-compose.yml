@@ -1,0 +1,113 @@
+services:
+  hive-metastore:
+    build: ./metastore
+    container_name: hive-metastore
+    hostname: hive-metastore
+    ports:
+      - "9083:9083"
+    environment:
+      - HIVE_POSTGRES_HOST=postgres
+      - HIVE_POSTGRES_PORT=5432
+      - HIVE_POSTGRES_DB=metastore
+      - HIVE_DB_USER=hive
+      - HIVE_DB_PASSWORD=hive
+      - CREATE_DB_IF_MISSING=true
+      - JDBC_EXTRA_PARAMS=sslmode=disable
+      - AZURE_STORAGE_ACCOUNT_NAME=${AZURE_STORAGE_ACCOUNT_NAME}
+      - AZURE_STORAGE_ACCOUNT_KEY=${AZURE_STORAGE_ACCOUNT_KEY}
+      - AZURE_STORAGE_CONTAINER=${AZURE_STORAGE_CONTAINER}
+    depends_on:
+      - postgres
+    env_file:
+      - .env
+    networks:
+      - default
+
+  postgres:
+    image: postgres:15
+    container_name: hive-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=metastore_db
+      - POSTGRES_USER=hive
+      - POSTGRES_PASSWORD=hive
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - default
+
+  starrocks:
+    image: starrocks/allin1-ubuntu:3.5-latest
+    ports:
+      - "9030:9030"
+      - "8030:8030"
+      - "8040:8040"
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+    volumes:
+      - starrocks_data:/opt/starrocks
+    depends_on:
+      - hive-metastore
+    env_file:
+      - .env
+
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    env_file:
+      - .env
+
+  dagster-webserver:
+    build: ./dagster
+    ports:
+      - "3000:3000"
+    environment:
+      - DAGSTER_HOME=/opt/dagster/dagster_home
+    volumes:
+      - ./dagster:/opt/dagster/app
+      - dagster_home:/opt/dagster/dagster_home
+    depends_on:
+      - starrocks
+      - ollama
+      - hive-metastore
+    env_file:
+      - .env
+    command: dagster-webserver -h 0.0.0.0 -p 3000
+
+  dagster-daemon:
+    build: ./dagster
+    environment:
+      - DAGSTER_HOME=/opt/dagster/dagster_home
+    volumes:
+      - ./dagster:/opt/dagster/app
+      - dagster_home:/opt/dagster/dagster_home
+    depends_on:
+      - dagster-webserver
+    env_file:
+      - .env
+    command: dagster-daemon run
+
+  data-generator:
+    build: ./data_generator
+    environment:
+      - AZURE_STORAGE_ACCOUNT_NAME=${AZURE_STORAGE_ACCOUNT_NAME}
+      - AZURE_STORAGE_ACCOUNT_KEY=${AZURE_STORAGE_ACCOUNT_KEY}
+      - AZURE_STORAGE_CONTAINER=${AZURE_STORAGE_CONTAINER}
+    env_file:
+      - .env
+    depends_on:
+      - starrocks
+
+volumes:
+  postgres_data:
+  starrocks_data:
+  ollama_data:
+  dagster_home:
+
+networks:
+  default:
+    name: energy-trading-net

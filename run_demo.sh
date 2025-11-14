@@ -40,30 +40,30 @@ run_all_stages() {
     echo -e "You'll manually click 'Materialize' and see the results after each stage.${NC}"
     echo ""
     read -p "Press Enter to begin the demo..."
-    
+
     # Run each stage
     bash "$SCRIPT_DIR/stage1_weather_data.sh"
     echo ""
     echo -e "${YELLOW}Stage 1 complete! Moving to Stage 2...${NC}"
     sleep 2
-    
+
     bash "$SCRIPT_DIR/stage2_hive_catalog.sh"
     echo ""
     echo -e "${YELLOW}Stage 2 complete! Moving to Stage 3...${NC}"
     sleep 2
-    
+
     bash "$SCRIPT_DIR/stage3_postgres_catalog.sh"
     echo ""
     echo -e "${YELLOW}Stage 3 complete! Moving to Stage 4...${NC}"
     sleep 2
-    
+
     bash "$SCRIPT_DIR/stage4_ai_pipeline.sh"
     echo ""
     echo -e "${YELLOW}Stage 4 complete! Moving to Stage 5...${NC}"
     sleep 2
-    
+
     bash "$SCRIPT_DIR/stage5_multi_catalog.sh"
-    
+
     echo ""
     echo -e "${GREEN}╔════════════════════════════════════════════════════════════════════════╗${NC}"
     echo -e "${GREEN}║  🎉 COMPLETE DEMO FINISHED!                                            ║${NC}"
@@ -73,7 +73,7 @@ run_all_stages() {
 # Main loop
 while true; do
     show_menu
-    
+
     case $choice in
         1)
             run_all_stages

@@ -1,4 +1,5 @@
 """Configuration and environment variables for the energy trading pipeline"""
+
 import os
 
 # Azure Storage configuration

@@ -16,7 +16,7 @@ echo ""
 docker exec mft-energyoss-energy-trading-starrocks-1 mysql -h 127.0.0.1 -P 9030 -u root --table -e "
 SET CATALOG default_catalog;
 USE energy_trading;
-SELECT 
+SELECT
     'trading_decisions' as table_name,
     'StarRocks OLAP' as storage_tech,
     'Local Storage' as location,
@@ -32,7 +32,7 @@ echo "   Location: Azure Blob Storage (ABFSS)"
 echo ""
 docker exec mft-energyoss-energy-trading-starrocks-1 mysql -h 127.0.0.1 -P 9030 -u root --table -e "
 SET CATALOG hive_catalog;
-SELECT 
+SELECT
     'weather' as table_name,
     'Delta Lake' as storage_tech,
     'Azure Blob (ABFSS)' as location,
@@ -49,14 +49,14 @@ echo ""
 docker exec mft-energyoss-energy-trading-starrocks-1 mysql -h 127.0.0.1 -P 9030 -u root --table -e "
 SET CATALOG postgres_catalog;
 USE public;
-SELECT 
+SELECT
     'DBS' as table_name,
     'PostgreSQL' as storage_tech,
     'JDBC Connection' as location,
     COUNT(*) as row_count
 FROM DBS
 UNION ALL
-SELECT 
+SELECT
     'TBLS' as table_name,
     'PostgreSQL' as storage_tech,
     'JDBC Connection' as location,
@@ -71,7 +71,7 @@ echo "   Joining ALL THREE storage technologies in ONE query!"
 echo "============================================================================"
 echo ""
 docker exec mft-energyoss-energy-trading-starrocks-1 mysql -h 127.0.0.1 -P 9030 -u root --table -e "
-SELECT 
+SELECT
     '🎯 Multi-Storage Query' as query_type,
     COUNT(DISTINCT td.id) as starrocks_decisions,
     COUNT(DISTINCT w.temperature) as deltalake_weather_readings,
@@ -87,19 +87,19 @@ echo "5️⃣  DETAILED CONNECTOR INFORMATION"
 echo "============================================================================"
 echo ""
 docker exec mft-energyoss-energy-trading-starrocks-1 mysql -h 127.0.0.1 -P 9030 -u root --table -e "
-SELECT 
+SELECT
     'default_catalog' as catalog_name,
     'Internal' as connector_type,
     'Local columnar OLAP storage' as storage_technology,
     'High-performance analytics' as use_case
 UNION ALL
-SELECT 
+SELECT
     'hive_catalog' as catalog_name,
     'Hive' as connector_type,
     'Delta Lake on Azure Blob Storage via Hive Metastore' as storage_technology,
     'Data lake queries without ETL' as use_case
 UNION ALL
-SELECT 
+SELECT
     'postgres_catalog' as catalog_name,
     'Jdbc' as connector_type,
     'PostgreSQL database via JDBC connector' as storage_technology,

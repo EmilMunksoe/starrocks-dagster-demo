@@ -82,7 +82,7 @@ cleanup() {
 run_schematool() {
   local operation="$1"
   local description="$2"
-  
+
   echo "[entrypoint] ${description} ..."
   set +e
   /opt/hive/bin/schematool \
@@ -142,12 +142,12 @@ main() {
   setup_environment
   wait_for_postgres
   create_database_if_missing
-  
+
   acquire_advisory_lock
   trap cleanup EXIT
-  
+
   initialize_schema
-  
+
   echo "[entrypoint] starting Hive Metastore ..."
   exec /opt/hive/bin/start-metastore
 }

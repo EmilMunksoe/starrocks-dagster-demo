@@ -1,4 +1,5 @@
 """Energy trading pipeline - Dagster definitions"""
+
 from dagster import Definitions
 
 from .assets import all_assets

@@ -8,15 +8,16 @@ This module contains all Dagster assets that make up the energy trading pipeline
 - postgres_external_catalog: Creates PostgreSQL external catalog for Hive Metastore metadata
 - multi_catalog_analytics: Demonstrates multi-catalog queries across all data sources
 """
+
 from dagster import load_assets_from_modules
 
 from . import (
-    weather_data, 
-    trained_model, 
-    trading_decision, 
+    weather_data,
+    trained_model,
+    trading_decision,
     delta_external_catalog,
     postgres_external_catalog,
-    multi_catalog_analytics
+    multi_catalog_analytics,
 )
 
 # Load all assets from the modules
@@ -29,10 +30,10 @@ multi_catalog_analytics_assets = load_assets_from_modules([multi_catalog_analyti
 
 # Export all assets
 all_assets = [
-    *weather_data_assets, 
-    *trained_model_assets, 
+    *weather_data_assets,
+    *trained_model_assets,
     *trading_decision_assets,
     *delta_external_catalog_assets,
     *postgres_external_catalog_assets,
-    *multi_catalog_analytics_assets
+    *multi_catalog_analytics_assets,
 ]

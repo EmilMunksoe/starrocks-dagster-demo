@@ -16,7 +16,8 @@ def delta_external_catalog(context: AssetExecutionContext) -> pd.DataFrame:
     """Create Hive external catalog in StarRocks and query Delta Lake via Hive Metastore"""
     catalog_name = "hive_catalog"
     
-    with get_starrocks_connection('energy_trading') as (conn, cursor):
+    # Don't specify database - just connect to StarRocks
+    with get_starrocks_connection() as (conn, cursor):
         context.log.info(f"🔧 Creating Hive external catalog '{catalog_name}' in StarRocks...")
         
         # Drop existing catalog if it exists

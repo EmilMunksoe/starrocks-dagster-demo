@@ -4,7 +4,6 @@ from typing import Dict, Any
 
 import numpy as np
 import pandas as pd
-import pymysql
 import requests
 from dagster import asset, AssetExecutionContext
 from sklearn.linear_model import LinearRegression
@@ -13,13 +12,11 @@ from deltalake import write_deltalake
 from ..config import (
     OLLAMA_HOST,
     OLLAMA_PORT,
-    HIVE_METASTORE_HOST,
-    HIVE_METASTORE_PORT,
     AZURE_STORAGE_ACCOUNT_NAME,
     AZURE_STORAGE_ACCOUNT_KEY,
     AZURE_STORAGE_CONTAINER
 )
-from ..utils import get_starrocks_connection
+from ..utils import get_starrocks_connection, register_delta_table_in_hive_metastore
 
 
 @asset
@@ -179,102 +176,18 @@ def _store_decision_in_delta_lake(
         
         context.log.info(f"✅ Stored decision in Delta Lake: price=${predicted_price:.2f}, trade={should_trade}")
         
-        # Register in Hive Metastore
-        _register_in_hive_metastore(context, namespace, table_name, storage_location)
+        # Register in Hive Metastore using shared utility
+        columns = [
+            ('timestamp', 'timestamp', 'Decision timestamp'),
+            ('predicted_price', 'double', 'Predicted energy price'),
+            ('decision', 'boolean', 'Trading decision')
+        ]
+        register_delta_table_in_hive_metastore(
+            context, namespace, table_name, storage_location, columns, drop_if_exists=False
+        )
         
     except Exception as e:
         context.log.error(f"Delta Lake error: {e}. Decision not stored in lakehouse.")
-
-
-def _register_in_hive_metastore(context: AssetExecutionContext, namespace: str, table_name: str, storage_location: str) -> None:
-    """Register Delta Lake table in Hive Metastore via Thrift"""
-    try:
-        from hmsclient import HMSClient
-        from hmsclient.genthrift.hive_metastore.ttypes import (
-            Database, Table, StorageDescriptor, SerDeInfo, FieldSchema
-        )
-        
-        context.log.info(f"Connecting to Hive Metastore at {HIVE_METASTORE_HOST}:{HIVE_METASTORE_PORT}")
-        
-        # Connect to Hive Metastore via Thrift
-        client = HMSClient(host=HIVE_METASTORE_HOST, port=HIVE_METASTORE_PORT)
-        client.open()
-        
-        # Create database if not exists
-        try:
-            db = client.get_database(namespace)
-            context.log.info(f"Database '{namespace}' already exists")
-        except Exception:
-            context.log.info(f"Creating database '{namespace}'")
-            db = Database(
-                name=namespace,
-                description=f"Database for {namespace} tables",
-                locationUri=f"abfss://{AZURE_STORAGE_CONTAINER}@{AZURE_STORAGE_ACCOUNT_NAME}.dfs.core.windows.net/{namespace}",
-                parameters={}
-            )
-            client.create_database(db)
-        
-        # Check if table exists
-        try:
-            existing_table = client.get_table(dbname=namespace, tbl_name=table_name)
-            if existing_table:
-                context.log.info(f"Table {namespace}.{table_name} already registered")
-                client.close()
-                return
-        except Exception:
-            context.log.info(f"Table {namespace}.{table_name} does not exist, creating it")
-        
-        # Define table schema
-        cols = [
-            FieldSchema(name='timestamp', type='timestamp', comment='Decision timestamp'),
-            FieldSchema(name='predicted_price', type='double', comment='Predicted energy price'),
-            FieldSchema(name='decision', type='boolean', comment='Trading decision')
-        ]
-        
-        # Define storage descriptor
-        sd = StorageDescriptor(
-            cols=cols,
-            location=storage_location,
-            inputFormat='org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat',
-            outputFormat='org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat',
-            compressed=False,
-            numBuckets=-1,
-            serdeInfo=SerDeInfo(
-                name=table_name,
-                serializationLib='org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe',
-                parameters={}
-            ),
-            bucketCols=[],
-            sortCols=[],
-            parameters={}
-        )
-        
-        # Create table object
-        table = Table(
-            tableName=table_name,
-            dbName=namespace,
-            owner='dagster',
-            createTime=0,
-            lastAccessTime=0,
-            retention=0,
-            sd=sd,
-            partitionKeys=[],
-            parameters={'EXTERNAL': 'TRUE'},
-            tableType='EXTERNAL_TABLE'
-        )
-        
-        # Register table in Hive Metastore
-        context.log.info(f"Registering table '{namespace}.{table_name}' in Hive Metastore")
-        client.create_table(table)
-        
-        context.log.info(f"✅ Successfully registered table {namespace}.{table_name} in Hive Metastore")
-        
-        client.close()
-        
-    except ImportError:
-        context.log.warning("hmsclient not installed, skipping Hive Metastore registration")
-    except Exception as e:
-        context.log.warning(f"Could not register table in Hive Metastore: {e}")
 
 
 def _store_decision_in_starrocks(

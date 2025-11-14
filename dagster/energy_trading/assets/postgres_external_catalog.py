@@ -9,7 +9,8 @@ def postgres_external_catalog(context: AssetExecutionContext) -> None:
     """Create PostgreSQL external catalog in StarRocks pointing to Hive Metastore backend"""
     catalog_name = "postgres_catalog"
     
-    with get_starrocks_connection("energy_trading") as (conn, cursor):
+    # Don't specify database - just connect to StarRocks
+    with get_starrocks_connection() as (conn, cursor):
         # Drop catalog if exists
         try:
             context.log.info(f"Dropping existing catalog '{catalog_name}' if it exists")

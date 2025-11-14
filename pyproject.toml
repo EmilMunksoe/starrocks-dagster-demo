@@ -4,10 +4,10 @@ version = "0.1.0"
 description = "Setup script for energy trading demo"
 requires-python = ">=3.11"
 dependencies = [
-    "pandas",
-    "deltalake",
-    "azure-storage-blob",
-    "python-dotenv",
+    "pandas==2.3.3",
+    "deltalake==1.2.1",
+    "azure-storage-blob==12.27.1",
+    "python-dotenv==1.2.1",
 ]
 
 [build-system]

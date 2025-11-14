@@ -2,23 +2,22 @@
 name = "energy-trading-dagster"
 version = "0.1.0"
 description = "Energy trading ETL pipeline with Dagster"
-requires-python = ">=3.11"
+requires-python = ">=3.13"
 dependencies = [
-    "dagster",
-    "dagster-webserver",
-    "dagstermill",
-    "pandas",
-    "numpy",
-    "scikit-learn",
-    "deltalake",
-    "azure-storage-blob",
-    "azure-identity",
-    "pymysql",
-    "hmsclient",
-    "ollama",
-    "requests",
-    "python-dotenv",
-    "pyarrow",
+    "dagster==1.11.16",
+    "dagster-webserver==1.11.16",
+    "pandas==2.3.3",
+    "numpy==2.3.4",
+    "scikit-learn==1.7.2",
+    "deltalake==1.2.1",
+    "azure-storage-blob==12.27.1",
+    "azure-identity==1.25.1",
+    "pymysql==1.1.2",
+    "hmsclient==0.1.1",
+    "ollama==0.6.0",
+    "requests==2.32.5",
+    "python-dotenv==1.2.1",
+    "pyarrow==22.0.0",
 ]
 
 [build-system]

@@ -1,8 +1,17 @@
-"""Asset definitions for the energy trading pipeline"""
+"""Asset definitions for the energy trading pipeline
+
+This module contains all Dagster assets that make up the energy trading pipeline:
+- weather_data: Generates weather data and stores in Delta Lake via Hive Metastore
+- trained_model: Trains ML model to predict energy prices
+- trading_decision: Uses AI to make trading decisions based on predictions
+- delta_external_catalog: Creates Hive external catalog in StarRocks for Delta Lake access
+- postgres_external_catalog: Creates PostgreSQL external catalog for Hive Metastore metadata
+- multi_catalog_analytics: Demonstrates multi-catalog queries across all data sources
+"""
 from dagster import load_assets_from_modules
 
 from . import (
-    wearther_data, 
+    weather_data, 
     trained_model, 
     trading_decision, 
     delta_external_catalog,
@@ -11,7 +20,7 @@ from . import (
 )
 
 # Load all assets from the modules
-weather_data_assets = load_assets_from_modules([wearther_data])
+weather_data_assets = load_assets_from_modules([weather_data])
 trained_model_assets = load_assets_from_modules([trained_model])
 trading_decision_assets = load_assets_from_modules([trading_decision])
 delta_external_catalog_assets = load_assets_from_modules([delta_external_catalog])

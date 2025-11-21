@@ -60,6 +60,25 @@ services:
       - ollama_data:/root/.ollama
     env_file:
       - .env
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  ollama-pull:
+    image: curlimages/curl:latest
+    depends_on:
+      ollama:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        echo "Pulling llama3.2:1b model..."
+        curl -X POST http://ollama:11434/api/pull -d '{"name": "llama3.2:1b"}'
+        echo ""
+        echo "Model pull initiated"
+    restart: "no"
 
   dagster-webserver:
     build: ./dagster

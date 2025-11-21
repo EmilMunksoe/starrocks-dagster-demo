@@ -24,6 +24,10 @@ echo ""
 echo "Stopping containers and removing volumes..."
 docker-compose down -v
 
+# Explicitly remove the dagster_home volume to prevent migration issues
+echo "Cleaning up Dagster storage..."
+docker volume rm mft-energyoss-energy-trading_dagster_home 2>/dev/null || true
+
 echo ""
 echo "Starting services..."
 docker-compose up -d
@@ -69,8 +73,4 @@ echo "Service URLs:"
 echo "  • StarRocks: mysql -h localhost -P 9030 -u root"
 echo "  • Dagster UI: http://localhost:3000"
 echo "  • Ollama: http://localhost:11434"
-echo ""
-echo "Ready to run demo:"
-echo "  ./run_demo.sh"
-echo ""
 echo "============================================================================"

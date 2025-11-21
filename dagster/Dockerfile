@@ -28,6 +28,10 @@ COPY . .
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev
 
+# Create dagster home directory and copy config
+RUN mkdir -p /opt/dagster/dagster_home
+COPY dagster.yaml /opt/dagster/dagster_home/dagster.yaml
+
 # Add venv to PATH
 ENV PATH="/opt/dagster/app/.venv/bin:$PATH"
 

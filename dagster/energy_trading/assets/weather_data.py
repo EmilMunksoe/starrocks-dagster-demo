@@ -18,7 +18,7 @@ class WeatherDataConfig(Config):
     """Configuration for weather data generation"""
 
     num_samples: int = Field(
-        default=350, description="Number of sample weather records to generate"
+        default=1500, description="Number of sample weather records to generate"
     )
 
 
@@ -43,7 +43,7 @@ def weather_data(
         ("energy_price", "double", "Energy price"),
     ]
     register_delta_table_in_hive_metastore(
-        context, namespace, table_name, storage_location, columns, drop_if_exists=True
+        context, namespace, table_name, storage_location, columns, drop_if_exists=False
     )
 
     return df
@@ -52,20 +52,62 @@ def weather_data(
 def _generate_sample_data(
     context: AssetExecutionContext, num_samples: int
 ) -> pd.DataFrame:
-    """Generate random sample weather data"""
-    np.random.seed()
+    """Generate random sample weather data with significantly varied distributions"""
+    import time
 
-    temperatures = np.random.uniform(10, 35, num_samples)
-    humidities = np.random.uniform(30, 90, num_samples)
-    wind_speeds = np.random.uniform(0, 20, num_samples)
+    np.random.seed(int(time.time() * 1000) % (2**32))
 
-    base_prices = np.random.uniform(30, 100, num_samples)
-    temp_effect = temperatures * 0.5
-    wind_effect = -wind_speeds * 1.5
-    humidity_effect = np.random.normal(0, 5, num_samples)
+    # Randomly choose a "season" or "weather pattern" for this batch
+    # This creates drastically different statistical distributions each run
+    pattern = np.random.choice(["winter", "spring", "summer", "fall", "extreme"])
 
-    energy_prices = base_prices + temp_effect + wind_effect + humidity_effect
-    energy_prices = np.clip(energy_prices, 20, 150)
+    if pattern == "winter":
+        temp_mean, temp_std = 5, 8
+        humidity_mean, humidity_std = 75, 15
+        wind_mean, wind_std = 15, 8
+        price_base = 90
+        context.log.info("🌨️  Generating WINTER weather pattern")
+    elif pattern == "summer":
+        temp_mean, temp_std = 32, 6
+        humidity_mean, humidity_std = 45, 20
+        wind_mean, wind_std = 8, 5
+        price_base = 110
+        context.log.info("☀️  Generating SUMMER weather pattern")
+    elif pattern == "spring":
+        temp_mean, temp_std = 18, 7
+        humidity_mean, humidity_std = 60, 18
+        wind_mean, wind_std = 12, 6
+        price_base = 60
+        context.log.info("🌸  Generating SPRING weather pattern")
+    elif pattern == "fall":
+        temp_mean, temp_std = 15, 8
+        humidity_mean, humidity_std = 68, 17
+        wind_mean, wind_std = 13, 7
+        price_base = 70
+        context.log.info("🍂  Generating FALL weather pattern")
+    else:  # extreme
+        temp_mean, temp_std = np.random.uniform(-5, 45), 12
+        humidity_mean, humidity_std = np.random.uniform(20, 90), 25
+        wind_mean, wind_std = np.random.uniform(5, 25), 10
+        price_base = np.random.uniform(40, 150)
+        context.log.info("⚡ Generating EXTREME/RANDOM weather pattern")
+
+    temperatures = np.random.normal(temp_mean, temp_std, num_samples)
+    temperatures = np.clip(temperatures, -10, 50)
+
+    humidities = np.random.normal(humidity_mean, humidity_std, num_samples)
+    humidities = np.clip(humidities, 10, 100)
+
+    wind_speeds = np.random.normal(wind_mean, wind_std, num_samples)
+    wind_speeds = np.clip(wind_speeds, 0, 35)
+
+    temp_effect = (temperatures - 20) * np.random.uniform(1.5, 3.5)
+    wind_effect = wind_speeds * np.random.uniform(-2.0, -0.5)
+    humidity_effect = (humidities - 50) * np.random.uniform(-0.3, 0.3)
+
+    energy_prices = price_base + temp_effect + wind_effect + humidity_effect
+    energy_prices += np.random.normal(0, 15, num_samples)  # Random noise
+    energy_prices = np.clip(energy_prices, 20, 200)
 
     df = pd.DataFrame(
         {
@@ -76,7 +118,11 @@ def _generate_sample_data(
         }
     )
 
-    context.log.info(f"Generated {len(df)} random sample records")
+    context.log.info(
+        f"Generated {len(df)} records | "
+        f"Temp: {temperatures.mean():.1f}±{temperatures.std():.1f}°C | "
+        f"Price: {energy_prices.mean():.1f}±{energy_prices.std():.1f}"
+    )
     return df
 
 
@@ -94,7 +140,7 @@ def _write_to_delta_lake(
             f"Writing {len(df)} records as Delta Lake to {storage_location}"
         )
         write_deltalake(
-            storage_location, df, mode="overwrite", storage_options=storage_options
+            storage_location, df, mode="append", storage_options=storage_options
         )
         context.log.info("Successfully wrote Delta Lake data to Azure Storage")
 

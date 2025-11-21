@@ -7,7 +7,7 @@ from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
 
 
-@asset(deps=["delta_external_catalog", "postgres_external_catalog"])
+@asset(deps=["weather_data"])
 def trained_model(
     context: AssetExecutionContext, weather_data: pd.DataFrame
 ) -> LinearRegression:

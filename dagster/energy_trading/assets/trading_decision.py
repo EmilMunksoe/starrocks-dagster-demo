@@ -33,14 +33,15 @@ def trading_decision(
     predicted_price = trained_model.predict(latest_data)[0]
     context.log.info(f"Predicted energy price: ${predicted_price:.2f}/MWh")
 
+    weather_stats = _calculate_weather_stats(context, weather_data)
+
     should_trade = _get_trading_decision_from_ollama(
         context, latest_data, predicted_price
     )
 
-    _store_decision_in_delta_lake(context, predicted_price, should_trade)
+    _store_decision_in_delta_lake(context, predicted_price, should_trade, weather_stats)
 
-    # Also store in StarRocks (for fast querying)
-    _store_decision_in_starrocks(context, predicted_price, should_trade)
+    _store_decision_in_starrocks(context, predicted_price, should_trade, weather_stats)
 
     return {"predicted_price": predicted_price, "should_trade": should_trade}
 
@@ -69,6 +70,35 @@ def _get_latest_weather_data(
         )
 
     return latest_data
+
+
+def _calculate_weather_stats(
+    context: AssetExecutionContext, weather_data: pd.DataFrame
+) -> Dict[str, float]:
+    """Calculate current weather statistics as a snapshot"""
+    if len(weather_data) == 0:
+        return {
+            "avg_temp": 0.0,
+            "avg_humidity": 0.0,
+            "avg_wind_speed": 0.0,
+            "avg_energy_price": 0.0,
+            "sample_count": 0,
+        }
+
+    stats = {
+        "avg_temp": float(weather_data["temperature"].mean()),
+        "avg_humidity": float(weather_data["humidity"].mean()),
+        "avg_wind_speed": float(weather_data["wind_speed"].mean()),
+        "avg_energy_price": float(weather_data["energy_price"].mean()),
+        "sample_count": len(weather_data),
+    }
+
+    context.log.info(
+        f"Weather stats snapshot: temp={stats['avg_temp']:.1f}°C, "
+        f"price=${stats['avg_energy_price']:.1f}, samples={stats['sample_count']}"
+    )
+
+    return stats
 
 
 def _get_trading_decision_from_ollama(
@@ -143,9 +173,12 @@ Consider weather impacts on supply/demand, forecast trends, and risk factors. Re
 
 
 def _store_decision_in_delta_lake(
-    context: AssetExecutionContext, predicted_price: float, should_trade: bool
+    context: AssetExecutionContext,
+    predicted_price: float,
+    should_trade: bool,
+    weather_stats: Dict[str, float],
 ) -> None:
-    """Store the trading decision in Delta Lake and register in Hive Metastore"""
+    """Store the trading decision in Delta Lake and register in Hive Metastore with weather snapshot"""
     try:
         namespace = "analytics"
         table_name = "trading_decisions"
@@ -200,9 +233,12 @@ def _store_decision_in_delta_lake(
 
 
 def _store_decision_in_starrocks(
-    context: AssetExecutionContext, predicted_price: float, should_trade: bool
+    context: AssetExecutionContext,
+    predicted_price: float,
+    should_trade: bool,
+    weather_stats: Dict[str, float],
 ) -> None:
-    """Store the trading decision in StarRocks database"""
+    """Store the trading decision in StarRocks database with weather snapshot"""
     with get_starrocks_connection() as (conn, cursor):
         cursor.execute("CREATE DATABASE IF NOT EXISTS energy_trading")
         cursor.execute("USE energy_trading")
@@ -212,7 +248,12 @@ def _store_decision_in_starrocks(
             id BIGINT,
             timestamp DATETIME,
             predicted_price FLOAT,
-            decision BOOLEAN
+            decision BOOLEAN,
+            avg_temp DOUBLE,
+            avg_humidity DOUBLE,
+            avg_wind_speed DOUBLE,
+            avg_energy_price DOUBLE,
+            sample_count BIGINT
         ) ENGINE=OLAP
         DUPLICATE KEY(id, timestamp)
         DISTRIBUTED BY HASH(id) BUCKETS 10
@@ -223,11 +264,23 @@ def _store_decision_in_starrocks(
         next_id = cursor.fetchone()[0]
 
         cursor.execute(
-            "INSERT INTO trading_decisions (id, timestamp, predicted_price, decision) VALUES (%s, NOW(), %s, %s)",
-            (int(next_id), float(predicted_price), bool(should_trade)),
+            """INSERT INTO trading_decisions
+            (id, timestamp, predicted_price, decision, avg_temp, avg_humidity, avg_wind_speed, avg_energy_price, sample_count)
+            VALUES (%s, NOW(), %s, %s, %s, %s, %s, %s, %s)""",
+            (
+                int(next_id),
+                float(predicted_price),
+                bool(should_trade),
+                weather_stats["avg_temp"],
+                weather_stats["avg_humidity"],
+                weather_stats["avg_wind_speed"],
+                weather_stats["avg_energy_price"],
+                weather_stats["sample_count"],
+            ),
         )
 
         conn.commit()
         context.log.info(
-            f"✅ Stored decision in StarRocks: price=${predicted_price:.2f}, trade={should_trade}"
+            f"✅ Stored decision in StarRocks: price=${predicted_price:.2f}, trade={should_trade}, "
+            f"weather avg: temp={weather_stats['avg_temp']:.1f}°C"
         )
